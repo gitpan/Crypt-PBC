@@ -1,0 +1,46 @@
+0.4.2-0.7.15:  Tue Nov 28 10:16:07 EST 2006
+   - jettero reversioned the package in preparation for launch.
+
+0.4.1-0.5.04:  Tue Nov 28 10:13:55 EST 2006
+   - jettero added the slamtest, which slams functions with all the wrong
+     arguments, literally, in the permutation sense.  It ran all night.
+     The test in the shipped-package is _much_ shorter, but can be extended
+     with 'MAX_PERM_TIME=1000 make test'
+
+0.4.1-0.5.03:  Sun Nov 26 22:26:33 EST 2006
+   - jettero added a memory (leak) test
+
+0.4.1-0.5.02:  Sun Nov 26 21:52:00 EST 2006
+   - jettero added a couple more tests and boatloads of docs
+
+0.3.17-0.5.01:  Mon Nov 20 08:38:04 EST 2006
+   - jettero completed a few more t/ tests (this time for the earith.xs).
+
+0.3.17-0.5.00:  Thu Nov 16 20:03:34 EST 2006
+   - jettero reversioned the package to represent the version of libpbc it
+     is intended to work with in addition to the version of the perl API.
+     0.3.17-0.5.00 means PBC.pm version 0.5.00 intended to work with libpbc
+     0.3.17.
+
+0.10:  Tue Nov 14 07:12:55 EST 2006
+   - jettero added a bit of type-saftey to PBC.pm. It seems libpbc
+     segfaults when the LHS and BASE of pow_zn() aren't in the same group,
+     or when pairing_apply() is applied on arguments that aren't
+     GT=e_hat(G1, G2); and that took some figurin'.
+
+0.09:  Sun Nov 12 15:13:33 EST 2006
+   - jettero started using element2bytes instead of element2mpz to print
+     elements. Many of the elements are atually quadratics, and poly coeffs
+     and the PBC crew do not make it simple to get to the mpzs.
+
+0.08:  Sun Nov 12 11:23:48 EST 2006
+   - jettero noticed possible bugs in either the init or as_str of
+     elements...
+
+0.07:  Sun Nov 12 09:03:27 EST 2006
+   - jettero fixed my changelog app
+
+0.01  Fri Nov 10 23:07:15 2006
+    - I got this package all skeled up ...  I need a small part of it for a
+      school project so I'm going to focus on that part first.
+
