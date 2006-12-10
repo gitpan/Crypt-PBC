@@ -6,7 +6,7 @@ use Crypt::PBC;
 
 if( defined $ENV{SKIP_ALL_BUT} ) { unless( $0 =~ m/\Q$ENV{SKIP_ALL_BUT}\E/ ) { plan tests => 1; skip(1); exit 0; } }
 
-my $curve = new Crypt::PBC("params_d.txt");
+my $curve = new Crypt::PBC("params_a.txt");
 my @e = ( $curve->init_G1, $curve->init_G2, $curve->init_GT, $curve->init_Zr, 1, new Math::BigInt(19) );
 my @i = ( 0 .. $#e ); # the indicies for permute()
 
@@ -50,6 +50,7 @@ my %slam_these = (
     set1   => 1,
 
     set_to_hash   => 1,
+    set_to_bytes  => 1,
     set_to_int    => 1,
     set_to_bigint => 1,
     set           => 1,
@@ -67,7 +68,7 @@ my $start_time = time;
 my $total_per  = 0;
 my $last_time  = 0;
 
-$ENV{MAX_PERM_TIME} = 1 unless defined $ENV{MAX_PERM_TIME} and $ENV{MAX_PERM_TIME} >= 0;
+$ENV{MAX_PERM_TIME} = 0.05 unless defined $ENV{MAX_PERM_TIME} and $ENV{MAX_PERM_TIME} >= 0;
 warn "\n\t$0 is set to truncate all tests longer than $ENV{MAX_PERM_TIME} second(s) (env MAX_PERM_TIME)\n" if $ENV{MAX_PERM_TIME} < 120;
 eval 'use Time::HiRes qw(time)'; # does't matter if this fails...
 warn "\t$0 gives more accurate calls/s estimates if Time::HiRes is installed...\n" if $@;
@@ -86,8 +87,11 @@ for my $function (sort slam_sort keys %slam_these) {
 
         my $m = int @a;
         if( my $total = ($v * $m) > $ENV{MAX_PERM_TIME} ) {
+            my $mpti = int ($ENV{MAX_PERM_TIME}/$v);
+               $mpti = 1 if $mpti < 1;
+
             @a = sort { (rand 1) <=> (rand 1) } @a;
-            @a = @a[ 0 .. ( int ($ENV{MAX_PERM_TIME}/$v) ) ];
+            @a = @a[ 0 .. $mpti ];
 
             my $nc = int @a;
 
@@ -109,12 +113,17 @@ for my $function (sort slam_sort keys %slam_these) {
 
         for my $e (@e) {
             next unless ref $e and $e->isa("Crypt::PBC::Element");
+
+            ## DEBUG ## open OUTPUT, ">>slamtest.log" or die $!;
+            ## DEBUG ## print OUTPUT "e=$e; function=$function; args=[@$args];\n";
+            ## DEBUG ## close OUTPUT;
+
             eval '$e->random->' . $function . '(@$args)';
 
             # We are just looking for segmentation faults for now
             # so we ignore most $@ entirely.
 
-            if( $@ and not $@ =~ m/(?:SCALAR ref|HASH ref|same group|int.provided.*accept|RHS|LHS|is not a bigint|must be.*(?:G1|G2|GT|Zr))/ ) {
+            if( $@ and not $@ =~ m/(?:SCALAR ref|HASH ref|provide something|same group|int.provided.*accept|RHS|LHS|is not a bigint|must be.*(?:G1|G2|GT|Zr))/ ) {
                 open OUTPUT, ">>slamtest.log" or die $!;
                 warn " [logged] \$@=$@";
                 print OUTPUT " function=$function; \$@=$@";

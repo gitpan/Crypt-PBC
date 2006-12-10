@@ -62,3 +62,33 @@ element_to_mpz(element)
 
     OUTPUT:
     RETVAL
+
+int 
+element_length_in_bytes(element)
+    element_t * element
+
+    CODE:
+    RETVAL = element_length_in_bytes(*element);
+
+    OUTPUT:
+    RETVAL
+
+SV *
+element_order(element)
+    element_t * element
+
+    PREINIT:
+    int i;
+    char *c;
+
+    CODE:
+    i = mpz_sizeinbase(element[0]->field->order, 10);
+    c = malloc(i + 2);
+
+    mpz_get_str(c, 10, element[0]->field->order);
+
+    RETVAL = newSVpv(c, strlen(c));
+    free(c);
+
+    OUTPUT:
+    RETVAL

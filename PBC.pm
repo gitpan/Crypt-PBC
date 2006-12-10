@@ -10,6 +10,10 @@ our %tt; # This maps our element types and our pairings.  Arguably this should b
          # done in the element references themselves, but those are scalar refs, not
          # hash refs.
 
+use overload 
+    '""'       => sub { my $this = shift; "Crypt::PBC::Element-$tt{$$this}{t}#$$this" },
+    'nomethod' => sub { my $this = shift; my $that = pop; croak "arithmetic operation '$that' not defined for $this" };
+
 1;
 
 # DESTROY {{{
@@ -60,8 +64,9 @@ sub as_hex {
 # as_base64 {{{
 sub as_base64 {
     my $this = shift;
+    my $arg  = shift || "";
     
-    my $that = encode_base64($this->as_bytes);
+    my $that = encode_base64($this->as_bytes, $arg);
     $that =~ s/\n$//sg;
 
     return $that;
@@ -108,11 +113,23 @@ sub random {
     return $this;
 }
 # }}}
+# set_to_bytes {{{
+sub set_to_bytes {
+    my $this = shift;
+    my $data = shift;
+
+    croak "provide something to set the element to" unless defined $data and length $data > 0;
+    &Crypt::PBC::element_from_bytes($this, $data);
+
+    $this;
+}
+# }}}
 # set_to_hash {{{
 sub set_to_hash {
     my $this = shift;
     my $hash = shift;
 
+    croak "provide something to set the element to" unless defined $hash and length $hash > 0;
     &Crypt::PBC::element_from_hash($this, $hash);
 
     $this;
@@ -147,7 +164,7 @@ sub set {
     my $this = shift;
     my $that = shift;
 
-    croak "LHS and RHS must be the same" unless $tt{$$this}{t} eq $tt{$$that}{t};
+    croak "LHS and RHS must be algebraically similar" unless $tt{$$this}{c} eq $tt{$$that}{c};
 
     &Crypt::PBC::element_set($this, $that);
 
@@ -180,7 +197,7 @@ sub set1 {
 sub is0 {
     my $this = shift;
 
-    return &Crypt::PBC::element_is0( $this ); # returns 0 if they're the same
+    return &Crypt::PBC::element_is0( $this ); # returns 0 if they're algebraically similar
 }
 # }}}
 # is1 {{{
@@ -195,9 +212,9 @@ sub is_eq {
     my $this = shift;
     my $that = shift;
 
-    croak "LHS and RHS should both have types" unless $tt{$$this}{t} and $tt{$$this}{t} eq $tt{$$that}{t};
+    croak "LHS and RHS should both have types" unless exists $tt{$$this} and $tt{$$this}{c} eq $tt{$$that}{c};
 
-    return not &Crypt::PBC::element_cmp( $this, $that ); # returns 0 if they're the same
+    return not &Crypt::PBC::element_cmp( $this, $that ); # returns 0 if they're algebraically similar
 }
 # }}}
 # is_sqr {{{
@@ -205,7 +222,7 @@ sub is_sqr {
     my $this = shift;
     my $type = $tt{$$this}{t};
 
-    croak "LHS should have a type" unless $tt{$$this}{t};
+    croak "LHS should have a type" unless exists $tt{$$this};
     return 1 if $type eq "G1";
     return 1 if $type eq "G2";
 
@@ -220,8 +237,13 @@ sub pow_zn {
     my $base = shift;
     my $expo = shift;
 
-    croak "LHS and BASE must be of the same group" unless $tt{$$this}{t} and $tt{$$this}{t} eq $tt{$$base}{t};
-    croak "EXPO must be of type Zr"                unless $tt{$$expo}{t} eq "Zr";
+    if( defined $base and not defined $expo ) {
+        $expo = $base;
+        $base = $this;
+    }
+
+    croak "LHS and BASE must be algebraically similar" unless exists $tt{$$this} and $tt{$$this}{c} eq $tt{$$base}{c};
+    croak "EXPO must be of type Zr"                    unless $tt{$$expo}{t} eq "Zr";
 
     &Crypt::PBC::element_pow_zn( $this, $base, $expo );
 
@@ -236,8 +258,8 @@ sub pow2_zn {
     my $a2 = shift;
     my $n2 = shift;
 
-    croak "LHS and a1 must be of the same group" unless $tt{$$this}{t} and $tt{$$this}{t} eq $tt{$$a1}{t};
-    croak "LHS and a2 must be of the same group" unless $tt{$$this}{t} eq $tt{$$a2}{t};
+    croak "LHS and a1 must be algebraically similar" unless exists $tt{$$this} and $tt{$$this}{c} eq $tt{$$a1}{c};
+    croak "LHS and a2 must be algebraically similar" unless $tt{$$this}{c} eq $tt{$$a2}{c};
     croak "n1 must be of type Zr"                unless $tt{$$n1}{t} eq "Zr";
     croak "n2 must be of type Zr"                unless $tt{$$n2}{t} eq "Zr";
 
@@ -256,9 +278,9 @@ sub pow3_zn {
     my $a3 = shift;
     my $n3 = shift;
 
-    croak "LHS and a1 must be of the same group" unless $tt{$$this}{t} and $tt{$$this}{t} eq $tt{$$a1}{t};
-    croak "LHS and a2 must be of the same group" unless $tt{$$this}{t} eq $tt{$$a2}{t};
-    croak "LHS and a3 must be of the same group" unless $tt{$$this}{t} eq $tt{$$a3}{t};
+    croak "LHS and a1 must be algebraically similar" unless exists $tt{$$this} and $tt{$$this}{c} eq $tt{$$a1}{c};
+    croak "LHS and a2 must be algebraically similar" unless $tt{$$this}{c} eq $tt{$$a2}{c};
+    croak "LHS and a3 must be algebraically similar" unless $tt{$$this}{c} eq $tt{$$a3}{c};
     croak "n1 must be of type Zr"                unless $tt{$$n1}{t} eq "Zr";
     croak "n2 must be of type Zr"                unless $tt{$$n2}{t} eq "Zr";
     croak "n3 must be of type Zr"                unless $tt{$$n3}{t} eq "Zr";
@@ -276,7 +298,7 @@ sub pow_bigint {
     my $expo = shift;
 
     croak "EXPO provided is not a bigint" unless ref $expo and $expo->isa("Math::BigInt");
-    croak "LHS and BASE must be of the same group" unless $tt{$$this}{t} and $tt{$$this}{t} eq $tt{$$base}{t};
+    croak "LHS and BASE must be algebraically similar" unless exists $tt{$$this} and $tt{$$this}{c} eq $tt{$$base}{c};
 
     &Crypt::PBC::element_pow_mpz( $this, $base, $expo->{value} );
 
@@ -293,8 +315,8 @@ sub pow2_bigint {
 
     croak "n1 provided is not a bigint" unless ref $n1 and $n1->isa("Math::BigInt");
     croak "n2 provided is not a bigint" unless ref $n2 and $n2->isa("Math::BigInt");
-    croak "LHS and a1 must be of the same group" unless $tt{$$this}{t} and $tt{$$this}{t} eq $tt{$$a1}{t};
-    croak "LHS and a2 must be of the same group" unless $tt{$$this}{t} eq $tt{$$a2}{t};
+    croak "LHS and a1 must be algebraically similar" unless exists $tt{$$this} and $tt{$$this}{c} eq $tt{$$a1}{c};
+    croak "LHS and a2 must be algebraically similar" unless $tt{$$this}{c} eq $tt{$$a2}{c};
 
     &Crypt::PBC::element_pow2_mpz( $this, $a1, $n1->{value}, $a2, $n2->{value} );
 
@@ -315,9 +337,9 @@ sub pow3_bigint {
     croak "n2 provided is not a bigint" unless ref $n2 and $n2->isa("Math::BigInt");
     croak "n3 provided is not a bigint" unless ref $n3 and $n2->isa("Math::BigInt");
 
-    croak "LHS and a1 must be of the same group" unless $tt{$$this}{t} and $tt{$$this}{t} eq $tt{$$a1}{t};
-    croak "LHS and a2 must be of the same group" unless $tt{$$this}{t} eq $tt{$$a2}{t};
-    croak "LHS and a3 must be of the same group" unless $tt{$$this}{t} eq $tt{$$a3}{t};
+    croak "LHS and a1 must be algebraically similar" unless exists $tt{$$this} and $tt{$$this}{c} eq $tt{$$a1}{c};
+    croak "LHS and a2 must be algebraically similar" unless $tt{$$this}{c} eq $tt{$$a2}{c};
+    croak "LHS and a3 must be algebraically similar" unless $tt{$$this}{c} eq $tt{$$a3}{c};
 
     &Crypt::PBC::element_pow3_mpz( $this, $a1, $n1->{value}, $a2, $n2->{value}, $a3, $n3->{value} );
 
@@ -333,7 +355,7 @@ sub square {
     my $rhs  = shift;
 
     if( $rhs ) {
-        croak "LHS and RHS must be of the same group" unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs}{t};
+        croak "LHS and RHS must be algebraically similar" unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs}{c};
 
     } else {
         $rhs = $lhs;
@@ -350,7 +372,7 @@ sub double {
     my $rhs  = shift;
 
     if( $rhs ) {
-        croak "LHS and RHS must be of the same group" unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs}{t};
+        croak "LHS and RHS must be algebraically similar" unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs}{c};
 
     } else {
         $rhs = $lhs;
@@ -367,7 +389,7 @@ sub halve {
     my $rhs  = shift;
 
     if( $rhs ) {
-        croak "LHS and RHS must be of the same group" unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs}{t};
+        croak "LHS and RHS must be algebraically similar" unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs}{c};
 
     } else {
         $rhs = $lhs;
@@ -384,7 +406,7 @@ sub neg {
     my $rhs  = shift;
 
     if( $rhs ) {
-        croak "LHS and RHS must be of the same group" unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs}{t};
+        croak "LHS and RHS must be algebraically similar" unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs}{c};
 
     } else {
         $rhs = $lhs;
@@ -401,7 +423,7 @@ sub invert {
     my $rhs  = shift;
 
     if( $rhs ) {
-        croak "LHS and RHS must be of the same group" unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs}{t};
+        croak "LHS and RHS must be algebraically similar" unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs}{c};
 
     } else {
         $rhs = $lhs;
@@ -421,14 +443,14 @@ sub add {
     my $rhs2 = shift;
 
     if( $rhs2 ) {
-        croak "LHS, RHS1 and RHS2 must be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs1}{t} and $tt{$$rhs1}{t} eq $tt{$$rhs2}{t};
+        croak "LHS, RHS1 and RHS2 must be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs1}{c} and $tt{$$rhs1}{c} eq $tt{$$rhs2}{c};
 
         &Crypt::PBC::element_add( $lhs, $rhs1, $rhs2 );
 
     } else {
-        croak "LHS and RHS should be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs1}{t};
+        croak "LHS and RHS should be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs1}{c};
 
         &Crypt::PBC::element_add( $lhs, $lhs, $rhs1 );
     }
@@ -443,14 +465,14 @@ sub Sub {
     my $rhs2 = shift;
 
     if( $rhs2 ) {
-        croak "LHS, RHS1 and RHS2 must be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs1}{t} and $tt{$$rhs1}{t} eq $tt{$$rhs2}{t};
+        croak "LHS, RHS1 and RHS2 must be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs1}{c} and $tt{$$rhs1}{c} eq $tt{$$rhs2}{c};
 
         &Crypt::PBC::element_sub( $lhs, $rhs1, $rhs2 );
 
     } else {
-        croak "LHS and RHS should be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs1}{t};
+        croak "LHS and RHS should be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs1}{c};
 
         &Crypt::PBC::element_sub( $lhs, $lhs, $rhs1 );
     }
@@ -465,14 +487,14 @@ sub mul {
     my $rhs2 = shift;
 
     if( $rhs2 ) {
-        croak "LHS, RHS1 and RHS2 must be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs1}{t} and $tt{$$rhs1}{t} eq $tt{$$rhs2}{t};
+        croak "LHS, RHS1 and RHS2 must be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs1}{c} and $tt{$$rhs1}{c} eq $tt{$$rhs2}{c};
 
         &Crypt::PBC::element_mul( $lhs, $rhs1, $rhs2 );
 
     } else {
-        croak "LHS and RHS should be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs1}{t};
+        croak "LHS and RHS should be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs1}{c};
 
         &Crypt::PBC::element_mul( $lhs, $lhs, $rhs1 );
     }
@@ -487,14 +509,14 @@ sub div {
     my $rhs2 = shift;
 
     if( $rhs2 ) {
-        croak "LHS, RHS1 and RHS2 must be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs1}{t} and $tt{$$rhs1}{t} eq $tt{$$rhs2}{t};
+        croak "LHS, RHS1 and RHS2 must be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs1}{c} and $tt{$$rhs1}{c} eq $tt{$$rhs2}{c};
 
         &Crypt::PBC::element_div( $lhs, $rhs1, $rhs2 );
 
     } else {
-        croak "LHS and RHS should be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs1}{t};
+        croak "LHS and RHS should be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs1}{c};
 
         &Crypt::PBC::element_div( $lhs, $lhs, $rhs1 );
     }
@@ -510,14 +532,14 @@ sub mul_zn {
     my $rhs2 = shift;
 
     if( $rhs2 ) {
-        croak "LHS, RHS1 must be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs1}{t} and $tt{$$rhs2}{t} eq "Zr";
+        croak "LHS, RHS1 must be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs1}{c} and $tt{$$rhs2}{t} eq "Zr";
 
         &Crypt::PBC::element_mul_zn( $lhs, $rhs1, $rhs2 );
 
     } else {
-        croak "RHS should be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$rhs1}{t} eq "Zr";
+        croak "RHS should be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$rhs1}{t} eq "Zr";
 
         &Crypt::PBC::element_mul_zn( $lhs, $lhs, $rhs1 );
     }
@@ -532,8 +554,8 @@ sub mul_int {
     my $rhs2 = shift;
 
     if( $rhs2 ) {
-        croak "LHS, RHS1 must be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs1}{t};
+        croak "LHS, RHS1 must be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs1}{c};
         croak "int provided ($rhs2) is not acceptable" unless $rhs2 =~ m/^\-?[0-9]+$/s;
 
         &Crypt::PBC::element_mul_si( $lhs, $rhs1, $rhs2 );
@@ -554,8 +576,8 @@ sub mul_bigint {
     my $rhs2 = shift;
 
     if( $rhs2 ) {
-        croak "LHS, RHS1 must be of the same group" 
-        unless $tt{$$lhs}{t} and $tt{$$lhs}{t} eq $tt{$$rhs1}{t};
+        croak "LHS, RHS1 must be algebraically similar" 
+        unless exists $tt{$$lhs} and $tt{$$lhs}{c} eq $tt{$$rhs1}{c};
         croak "int provided is not a bigint" unless ref $rhs2 and $rhs2->isa("Math::BigInt");
 
         &Crypt::PBC::element_mul_si( $lhs, $rhs1, $rhs2 );
@@ -577,9 +599,12 @@ sub pairing_apply {
     my $rhs2 = shift;
     my $pair = $tt{$$this}{p};
 
+    my $c1 = $tt{$$rhs1}{c};
+    my $c2 = $tt{$$rhs2}{c};
+
     croak "group type for LHS must be GT"  unless $tt{$$this}{t} eq "GT";
-    croak "group type for RHS1 must be G1" unless $tt{$$rhs1}{t} eq "G1";
-    croak "group type for RHS2 must be G2" unless $tt{$$rhs2}{t} eq "G2";
+    croak "group type for RHS1 must be G1" unless $c1 eq "G1" or $c1 eq "G[12]";
+    croak "group type for RHS2 must be G2" unless $c2 eq "G2" or $c2 eq "G[12]";
 
     &Crypt::PBC::pairing_apply( $this => ($rhs1, $rhs2) => $pair );
 
@@ -607,7 +632,18 @@ sub _stype {
     $Crypt::PBC::Element::tt{$$that} = {
         t => $type,
         p => $this,
+        c => $type,
     };
+
+    if( $type =~ m/G[12]/ ) {
+        # this is slow and spurious, but Ben is authoring an actual pairing function
+        my $_G1 = &Crypt::PBC::element_length_in_bytes( &Crypt::PBC::element_init_G1( $this ) );
+        my $_G2 = &Crypt::PBC::element_length_in_bytes( &Crypt::PBC::element_init_G2( $this ) );
+
+        if( $_G1 == $_G2 ) {
+            $Crypt::PBC::Element::tt{$$that}{c} = "G[12]";
+        }
+    }
 
     return;
 }
@@ -635,7 +671,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] ); 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = '0.4.2-0.7.17.1';
+our $VERSION = '0.7.18.3-0.4.2';
 
 sub AUTOLOAD {
     my $constname;
