@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Crypt-PBC
-version:      0.7.20.0-0.4.8
+version:      0.7.20.0-0.4.9
 version_from: PBC.pm
 installdirs:  site
 requires:
