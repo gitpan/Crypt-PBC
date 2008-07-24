@@ -665,16 +665,12 @@ package Crypt::PBC;
 use strict;
 use warnings;
 use Carp;
-
-require Exporter;
-use AutoLoader;
-
-our @ISA = qw(Exporter);
+use base 'Exporter';
 
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] ); 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-use version; our $VERSION = qv('0.7.20.0.4.18');
+use version; our $VERSION = qv('0.7.20.1.4.18');
 
 sub AUTOLOAD {
     my $constname;
@@ -725,4 +721,4 @@ sub new {
 
 # }}}
 
-__END__
+1;
