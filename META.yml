@@ -1,6 +1,6 @@
 ---
 name: Crypt-PBC
-version: 0.7.20.1.4.18
+version: 0.7.20.2.4.18
 author: []
 abstract: OO interface for the Stanford PBC library
 license: lgpl
@@ -16,7 +16,7 @@ build_requires:
 provides:
   Crypt::PBC:
     file: PBC.pm
-    version: 0.7.20.1.4.18
+    version: 0.7.20.2.4.18
   Crypt::PBC::Element:
     file: PBC.pm
   Crypt::PBC::Pairing:
