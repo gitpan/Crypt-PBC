@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Crypt-PBC
-version:             0.85
+version:             0.851
 abstract:            OO interface for the Stanford PBC library
 license:             ~
 author:              
