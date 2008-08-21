@@ -15,10 +15,7 @@ my @extra  = (
 eval { assert_lib( lib => 'pbc', libpath=>\@libpath, incpath=>\@incpath, header => "pbc.h" ); };
 if( $@ ) {
     warn "Error locating libpbc: $@";
-    local $| = 1;
-    print "Would you like to download and build libpbc automatically? (y/N enter) ";
-    print "\n";
-    my $res = ($ENV{BUILD_HERE} || <STDIN>);
+    my $res = ($ENV{BUILD_HERE} || prompt("Would you like to download and build libpbc automatically? [y/N]", "n"));
     if( $res =~ m/y/i ) {
         exit 0 unless &grab_libpbc($ver);
         exit 0 unless &unpack_libpbc($ver);
@@ -86,7 +83,7 @@ pbc-$ver/.libs/libpbc.so:
 
 sub unpack_libpbc {
     my $ver = shift;
-    return 1 if -d "pbc-$ver";
+    return 1 if -d "pbc-$ver" or $ENV{SKIP_DOWNLOAD};
 
     warn "unpacking libpbc from pbc-$ver.tar.gz...\n";
 
@@ -114,7 +111,7 @@ sub unpack_libpbc {
 
 sub grab_libpbc {
     my $ver = shift;
-    return 1 if -f "pbc-$ver.tar.gz";
+    return 1 if -f "pbc-$ver.tar.gz" or $ENV{SKIP_DOWNLOAD};
 
     warn "downloading libpbc from http://voltar.org/pbcfiles/pbc-$ver.tar.gz...\n";
 
