@@ -1,16 +1,33 @@
 --- #YAML:1.0
-name:                Crypt-PBC
-version:             0.854
-abstract:            OO interface for the Stanford PBC library
-license:             ~
-author:              
+name:               Crypt-PBC
+version:            0.855
+abstract:           OO interface for the Stanford PBC library
+author:
     - Paul Miller <jettero@cpan.org>
-generated_by:        ExtUtils::MakeMaker version 6.44
-distribution_type:   module
-requires:     
-    Math::BigInt:                  0
-    Math::BigInt::GMP:             0
-    MIME::Base64:                  0
+license:            lgpl2
+distribution_type:  module
+configure_requires:
+    ExtUtils::MakeMaker:  0
+build_requires:
+    ExtUtils::MakeMaker:  0
+requires:
+    Math::BigInt:       0
+    Math::BigInt::GMP:  0
+    MIME::Base64:       0
+    perl:               5.008
+resources:
+    repository:  http://github.com/jettero/crypt--pbc/tree
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.50
 meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
-    version: 1.3
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4
+keywords:
+    - pbc
+    - ecc
+    - crypt
+    - boneh
+    - ibe
