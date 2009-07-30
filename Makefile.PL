@@ -6,7 +6,7 @@ use ExtUtils::MakeMaker;
 my @libpath = qw(/lib /usr/lib /usr/local/lib);
 my @incpath = qw(/usr/include/pbc /usr/local/include/pbc /usr/include /usr/local/include);
 
-my $ver    = "0.4.18";
+my $ver    = "0.5.1";
 my @extra  = (
     LIBS => ['-lpbc'],
     INC  => join(" ", map {"-I$_"} (@incpath)),
@@ -14,8 +14,12 @@ my @extra  = (
 
 eval { assert_lib( lib => 'pbc', libpath=>\@libpath, incpath=>\@incpath, header => "pbc.h" ); };
 if( $@ ) {
-    warn "Error locating libpbc: $@";
-    my $res = ($ENV{BUILD_HERE} || prompt("Would you like to download and build libpbc automatically? [y/N]", "n"));
+    warn "Error locating libpbc version 0.5.1: $@";
+
+    warn "\nYou can get the latest debian binaries from https://voltar.org/pbcfiles\n\n";
+    sleep 1;
+
+    my $res = ($ENV{BUILD_HERE} || prompt("Would you like to download and build libpbc from tarball automatically? [y/N]", "n"));
     if( $res =~ m/y/i ) {
         exit 0 unless grab_libpbc($ver);
         exit 0 unless unpack_libpbc($ver);
@@ -40,15 +44,15 @@ WriteMakefile(
        AUTHOR         => 'Paul Miller <jettero@cpan.org>') : ()),
 
     ($ExtUtils::MakeMaker::VERSION ge '6.48'? 
-        (MIN_PERL_VERSION => 5.008,
+        (MIN_PERL_VERSION => 5.006001,
             META_MERGE => {
                 keywords => [qw(pbc ecc crypt boneh ibe)],
                 resources=> {
-                    repository => 'http://github.com/jettero/crypt--pbc/tree',
+                    repository => 'http://github.com/jettero/crypt--pbc/',
                 },
             },
 
-        LICENSE	=> 'lgpl2',
+        LICENSE	=> 'LGPL',
     ) : ()),
 
     @extra,
